@@ -7,7 +7,7 @@ def create_app():
 
 
     # import blueprints
-    from blueprints.auth.auth_routes import auth_bp
+    from app.blueprints.auth.auth_routes import auth_bp
     # register blueprints
     app.register_blueprint(auth_bp)
     

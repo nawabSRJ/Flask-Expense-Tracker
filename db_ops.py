@@ -144,8 +144,8 @@ def get_categories(user_id):
                     """
                     SELECT category_id, name
                     FROM categories
-                    WHERE user_id = %s
-                    ORDER BY name
+                    WHERE user_id = %s OR user_id IS NULL
+                    ORDER BY is_default DESC, name
                     """,
                     (user_id,)
                 )
@@ -155,6 +155,29 @@ def get_categories(user_id):
     except Exception as e:
         print('Get Categories Error:', e)
         return []
+
+# user creates new category
+def create_category(user_id, name):
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO categories (user_id, name, is_default)
+                    VALUES (%s, %s, FALSE)
+                    """,
+                    (user_id, name)
+                )
+                conn.commit()
+                return cur.lastrowid
+        finally:
+            conn.close()
+    except Exception as e:
+        print('Create Category Error:', e)
+        return None
+
+
 
 
 def get_recent_expenses(user_id, limit=5):
@@ -180,6 +203,11 @@ def get_recent_expenses(user_id, limit=5):
     except Exception as e:
         print('Get Recent Expenses Error:', e)
         return []
+
+
+# what is COALESCE ?
+# COALESCE(x,y) -> takes any number of args, checks from left to right, returns the first NOT Null arg
+# COALESCE(a, b, c, d) -> also allowed
 
 
 def get_dashboard_summary(user_id):
@@ -220,7 +248,7 @@ def get_dashboard_summary(user_id):
                         ON e.category_id = c.category_id
                         AND MONTH(e.expense_date) = MONTH(CURDATE())
                         AND YEAR(e.expense_date) = YEAR(CURDATE())
-                    WHERE c.user_id = %s
+                    WHERE c.user_id = %s OR c.user_id IS NULL
                     GROUP BY c.category_id, c.name
                     HAVING total > 0
                     ORDER BY total DESC
@@ -256,3 +284,83 @@ def get_dashboard_summary(user_id):
             'category_breakdown': [],
             'total_transactions': 0
         }
+
+# some info on COALESCE
+# Why it's used here: SUM(amount) returns NULL (not 0) when there are zero matching rows to sum — e.g. a brand-new user with no expenses this month. Without COALESCE, month_total would be None in Python, and your template's '%.2f'|format(summary['month_total']) would crash trying to format None as a float. COALESCE(SUM(amount), 0) says "if the sum comes back NULL, use 0 instead" — so you always get a clean number, even with zero rows.
+
+
+# practical example of COALESCE:
+# Practical example — say you wanted to show a payment note, falling back through a few optional fields:
+# COALESCE(custom_note, description, 'No note provided')
+# This returns custom_note if set, otherwise description if set, otherwise the literal string 'No note provided' as a final guaranteed fallback.
+
+
+# to fetch exactly one expense from the table ~ for editing
+def get_expense_by_id(expense_id, user_id):
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT expense_id, category_id, amount, description, payment_mode, expense_date
+                    FROM expenses
+                    WHERE expense_id = %s AND user_id = %s
+                    """,
+                    (expense_id, user_id)
+                )
+                return cur.fetchone()
+        finally:
+            conn.close()
+    except Exception as e:
+        print('Get Expense By Id Error:', e)
+        return None
+
+
+def update_expense(expense_id, user_id, data):
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE expenses
+                    SET category_id = %s, amount = %s, description = %s,
+                        payment_mode = %s, expense_date = %s
+                    WHERE expense_id = %s AND user_id = %s
+                    """,
+                    (
+                        data['category_id'],
+                        data['amount'],
+                        data['description'],
+                        data['payment_mode'],
+                        data['expense_date'],
+                        expense_id,
+                        user_id
+                    )
+                )
+                conn.commit()
+                return cur.rowcount > 0
+        finally:
+            conn.close()
+    except Exception as e:
+        print('Update Expense Error:', e)
+        return False
+
+
+def delete_expense(expense_id, user_id):
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM expenses WHERE expense_id = %s AND user_id = %s",
+                    (expense_id, user_id)
+                )
+                conn.commit()
+                return cur.rowcount > 0
+        finally:
+            conn.close()
+    except Exception as e:
+        print('Delete Expense Error:', e)
+        return False

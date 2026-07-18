@@ -16,7 +16,7 @@ CREATE TABLE users (
 -- Schema for Data Analytics stuff
 CREATE TABLE categories (
     category_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    user_id INT DEFAULT NULL,              -- NULL = global default, set = user's custom category
     name VARCHAR(50) NOT NULL,
     is_default BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(id)

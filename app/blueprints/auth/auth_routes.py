@@ -160,3 +160,9 @@ def login():
         }
 
         return redirect(url_for('user.dashboard'))
+
+
+@auth_bp.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return redirect(url_for('auth.login'))

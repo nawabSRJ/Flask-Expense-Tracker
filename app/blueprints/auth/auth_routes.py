@@ -150,12 +150,13 @@ def login():
         
         user = db_lookup['row']
         # start session
-        session['user']= {
-            'name' : user['name'],
-            'email' : user['email'],
-            'phone' : user['phone'],
-            'gender' : user['gender'],
-            'dob' : user['dob']
+        session['user'] = {
+            'id': user['id'],
+            'name': user['name'],
+            'email': user['email'],
+            'phone': user['phone'],
+            'gender': user['gender'],
+            'dob': user['dob']
         }
 
         return redirect(url_for('user.dashboard'))

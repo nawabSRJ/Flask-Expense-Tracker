@@ -9,8 +9,10 @@ def create_app():
     # import blueprints
     from app.blueprints.auth.auth_routes import auth_bp
     from app.blueprints.user.user_routes import user_bp
+    from app.blueprints.expenses.expense_routes import expense_bp
     # register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(expense_bp)
     
     return app
